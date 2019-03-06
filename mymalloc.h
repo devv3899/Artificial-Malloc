@@ -7,6 +7,8 @@
 
 #define MAX_SIZE 4096
 
+#define MAGIC_NUMBER 57921
+
 static char STORAGE_ARR[MAX_SIZE];
 
 void * mymalloc(unsigned int size, char *file, unsigned int line);

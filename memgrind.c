@@ -7,10 +7,9 @@ double elapsedTimes[6] = {0};
 
 void test1() {
 	// A: malloc() 1 byte and immediately free it - do this 150 times
-    int i=0;
-	for(i; i<150; i++) {
+	for(int i=0; i<150; i++) {
 		void *x = malloc(1);
-        free(x);
+		free(x);
 	}	
 }
 
@@ -23,15 +22,13 @@ void test2() {
 		count++;
 		
 		if(count == 50) {
-            int i=0;
-			for(i; i<50; i++) {
+			for(int i=0; i<50; i++) {
 				free(ptr[i]);
 			}
 		}
 	}
 	// remove the remaining 50 blocks.
-    int i = 50;
-	for(i; i<100; i++) {
+	for(int i=50; i<100; i++) {
 		free(ptr[i]);
 	}
 }
@@ -132,21 +129,22 @@ void test6() {
 	// F. Test efficient memory allocation after freeing memory block
 	void *ptr[6];
 	
+	// 2 bytes for magic number:
 	// assuming 2 bytes overhead on each block.
-	// 4 blocks of size: (4096 - 2*4)/4 = 1022
-	ptr[0] = malloc(1022);
-	ptr[1] = malloc(1022);
-	ptr[2] = malloc(1022);
-	ptr[3] = malloc(1022);
+	// 4 blocks of size: (4096 - 2*4 - 2)/4 = 1021
+	ptr[0] = malloc(1021);
+	ptr[1] = malloc(1021);
+	ptr[2] = malloc(1021);
+	ptr[3] = malloc(1021);
 	
 	// The entire memory has been allocated now.
 	// Lets remove the middle block
 	free(ptr[1]);
 	
-	// now we should be able to allocate 2 blocks from block size of 1024
-	// The 2 block size can be: (1024 - 2*2)/2 = 510
-	ptr[4] = malloc(510);
-	ptr[5] = malloc(510);
+	// now we should be able to allocate 2 blocks from block size of 1021
+	// The 2 block size can be: (1021 - 2)/2 = 509
+	ptr[4] = malloc(509);
+	ptr[5] = malloc(509);
 	
 	if(ptr[4] == NULL || ptr[5] == NULL) {
 		printf("Test Failed: The freed block memory should have been allocated again efficiently.\n");
@@ -155,40 +153,7 @@ void test6() {
 	free(ptr[2]);
 	free(ptr[3]);
 	free(ptr[4]);
-	free(ptr[5]);
-}
-
-void test7() {
-   
-    
-    // E1
-    int *dev = malloc(4);
-    free(dev);
-    int *parth = malloc(4);
-    //free(dev);
-    free(parth);
-    
-/*
-    // E2
-    int *ptr = malloc(4094);
-    free(ptr);
-   */
-  
-    //int *racing = malloc(40 * sizeof(int));
-    //free(racing);
-    
-   // int distance = 10;
-    //int *ptri = &distance;
-//printf("%d\n", &ptri);
-    //free(ptri);
-    
-    /*int r = 5;
-    int *test3 = (int*)malloc(sizeof(int));
-    test3 = &r;
-    //printf("%d\n", *test3);
-    //test3 = NULL;
-    free(test3);
-     */
+	free(ptr[5]);	
 }
 
 void runWorkload(int loadIndex) {
@@ -204,8 +169,6 @@ void runWorkload(int loadIndex) {
 	if(loadIndex == 4) test4();
 	if(loadIndex == 5) test5();
 	if(loadIndex == 6) test6();
-    if(loadIndex == 7) test7();
-    
 	
 	// end timer
 	gettimeofday(&t2, NULL);
@@ -228,8 +191,8 @@ int main() {
 	
 	int simulations = 0;
 	while(simulations < count) {
-        int t = 1;
-		for(t; t<=7; t++) {
+		
+		for(int t=1; t<=6; t++) {
 			runWorkload(t);
 		}
 		
@@ -238,10 +201,49 @@ int main() {
 	
 	// Now average the times.
 	printf("Elapsed time as per workload:\n");
-    int t = 1;
-	for(t; t<=7; t++) {
+	for(int t=1; t<=7; t++) {
 		elapsedTimes[t-1] /= count;
-		printf("The Elapsed time for work %d is : %lf microseconds.\n", t, elapsedTimes[t-1]);
+		printf("Workload %d: %lf uSec\n", t, elapsedTimes[t-1]);
 	}	
-
+	
+	/*
+	printReport();
+	
+	printf("After allocating memory for 20 Integers: \n");
+	int *v = (int *)malloc(20*sizeof(int));
+	printReport();
+	
+	printf("After allocating memory for 20 Integers: \n");
+	int *w = (int *)malloc(20*sizeof(int));
+	printReport();
+	
+	printf("After allocating memory for 20 Integers: \n");
+	int *x = (int *)malloc(20*sizeof(int));
+	printReport();
+	
+	printf("After allocating memory for 20 Integers: \n");
+	int *y = (int *)malloc(20*sizeof(int));
+	printReport();
+	
+	printf("After allocating memory for 20 Integers: \n");
+	int *z = (int *)malloc(20*sizeof(int));
+	printReport();
+	
+	printf("After freeing memory for second block: \n");
+	free(w);
+	printReport();
+	
+	printf("Again allocating memory for 10 Integers: \n");
+	w = (int *)malloc(10*sizeof(int));
+	printReport();	
+		
+	
+	printf("After freeing memory for fourth block: \n");
+	free(y);
+	printReport();
+	
+	printf("After freeing memory for third block: \n");
+	free(x);
+	printReport();
+	*/
 }

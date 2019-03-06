@@ -1,4 +1,5 @@
 #include "mymalloc.h"
+#include <string.h>
 
 // GLOBAL STORAGE on HEAP:
 // static char STORAGE_ARR[4096];
@@ -25,7 +26,6 @@ short myAbs(short x) {
 	}
 }
 
-
 /*
  * This function returns the allocated bytes for user in the given 
  * block of memory. The size is stored on starting 2 bytes.
@@ -35,16 +35,6 @@ short getBlockSize(void *blockStart) {
 	return *blockSize;
 }
 
-/*
- * This function checks if the block of memory has been initialized before the
- * first call. After initialization, the first 2 bytes of memory will contain
- * some positive value, denoting the memory size.
- */ 
-int checkInitialization() {	
-	// When static array gets initialized, it should contain some non-zero
-	// size at the start of the array
-	return (getBlockSize((void *) STORAGE_ARR) != 0);
-}
 
 /*
  * This function puts the size of the block on the starting 2
@@ -56,21 +46,50 @@ void putBlockSize(void *blockStart, short size) {
 	*blockSize = size;
 }
 
+
 /*
- * This function initializes the memory when we get first call to 
- * mymalloc function. We put the size of available memory in starting 
- * 2 bytes.
+ * This function returns the address of first memory block
+ * after skipping the magic number.
+ * Precondition: Memory has been initialized.
  */
-void initializeMemory() {
+void *getFirstBlockAddress() {
 	// We can not perform pointer arithmetic on void pointers
 	char *start = STORAGE_ARR;
-	char *end = (char *) STORAGE_ARR + MAX_SIZE;
+	char *end = (char *) STORAGE_ARR + sizeof(unsigned short);
 	
-	// Negative size below shows the block is available to be allocated
-	short size = -1 * (end - start - sizeof(short));
-	
-	putBlockSize((void *)start, size);
+	return (void *)end;
 }
+
+
+/*
+ * This function checks if the block of memory has been initialized before the
+ * first call. After initialization, the first 2 bytes of memory will contain
+ * some positive value, denoting the memory size.
+ */ 
+void checkInitialization() {	
+	
+	unsigned short *memStart = (unsigned short *) STORAGE_ARR;
+	
+	if(*memStart != MAGIC_NUMBER) {
+		// Memory has not been initialized.
+		
+		// clean memory
+		memset((void *)STORAGE_ARR, 0, MAX_SIZE);
+		
+		// Put magic number first.
+		*memStart = MAGIC_NUMBER;
+		
+		// forward for skipping MAGIC_NUMBER
+		char *start = (char *) STORAGE_ARR + sizeof(unsigned short);
+		char *end = (char *) STORAGE_ARR + MAX_SIZE;
+		
+		// Negative size below shows the block is available to be allocated
+		short size = -1 * (end - start - sizeof(short));
+		
+		putBlockSize((void *)start, size);
+	}
+}
+
 
 /*
  * this function checks the memory allocated to current block, if the size
@@ -110,12 +129,12 @@ void *nextBlockAddr(void *blockStart) {
 
 
 /*
- * this function tries to find the first free block, which is having
+ * this functiuon tries to find the first free block, which is having 
  * a minimum free memory, so that it can be returned to the user.
  * If function is not able to find such a block, it returns NULL.
  */
 void *getFirstFreeBlock(unsigned int minSize) {
-	void *current = (void *) STORAGE_ARR;
+	void *current = getFirstBlockAddress();
 	
 	while(current != NULL) {
 		// Check if block is available for allocation, and has required memory size
@@ -136,9 +155,7 @@ void *getFirstFreeBlock(unsigned int minSize) {
  */
 void *mymalloc(unsigned int size, char *file, unsigned int line) {
 	
-	if(!checkInitialization()) {
-		initializeMemory();
-	}
+	checkInitialization();
 	
 	void *freeBlock = getFirstFreeBlock(size);
 	
@@ -178,7 +195,7 @@ void *mymalloc(unsigned int size, char *file, unsigned int line) {
 // check if pointer is in range of our static array
 int isPointerInRange(void *ptr) {
 	// We can not perform pointer arithmetic on void pointers
-	char *start = STORAGE_ARR;
+	char *start = (char *) getFirstBlockAddress();
 	char *end = (char *) STORAGE_ARR + MAX_SIZE;
 	char *x = (char *) ptr;
 	
@@ -188,9 +205,7 @@ int isPointerInRange(void *ptr) {
 
 // check if pointer has been allocated by our code.
 int isPointerAllocatedByCode(void *ptr) {
-	// Check if the newly created block can be merged with other free blocks.
-	// To create a bigger chunk of memory
-	void *current = (void *) STORAGE_ARR;
+	void *current = getFirstBlockAddress();
 	
 	while(current != NULL) {
 		if(current == ptr) {
@@ -216,7 +231,7 @@ void freeMyBlock(void *blockStart) {
 	
 	// Check if the newly created block can be merged with other free blocks.
 	// To create a bigger chunk of memory
-	void *current = (void *) STORAGE_ARR;
+	void *current = getFirstBlockAddress();
 	
 	while(current != NULL) {
 		void *nextBlock = nextBlockAddr(current);
@@ -241,12 +256,7 @@ void freeMyBlock(void *blockStart) {
 /*
  * Function which frees the memory allocated by mymalloc function
  */ 
-void myfree(void *ptr, char *file, unsigned int line) {	
-	// Check if the initialization has been done for memory
-	if(!checkInitialization()) {
-		printf("Error: No pointer has been allocated till now. File %s and line %u\n", file, line);
-		return;
-	}
+void myfree(void *ptr, char *file, unsigned int line) {
 	
 	// check if pointer is in range of our static array
 	if(!isPointerInRange(ptr)) {
@@ -274,19 +284,19 @@ void myfree(void *ptr, char *file, unsigned int line) {
  * Utility function to print the current memory map
  */
 void printReport() {
-	if(!checkInitialization()) {
-		initializeMemory();
-	}
+	checkInitialization();
 	
-	void *current = (void *) STORAGE_ARR;
+	unsigned short *memStart = (unsigned short *) STORAGE_ARR;
+	printf("Magic Num: %d\n", *memStart);
+	
+	void *current = getFirstBlockAddress();
 	
 	int totalAllocatedBlocks = 0;
 	while(current != NULL) {
 		void *nextBlock = nextBlockAddr(current);
 		
-		/*
 		printf("Block Start: %x, End: %x, BlockSize: %d, inUse: %d\n",
-			current, nextBlock, myAbs(getBlockSize(current)), !isBlockAvailable(current));  */
+			current, nextBlock, myAbs(getBlockSize(current)), !isBlockAvailable(current));
 		
 		if(!isBlockAvailable(current)) {
 			totalAllocatedBlocks++;
@@ -303,11 +313,9 @@ void printReport() {
  * Utility function to find how many blocks are currently allocated.
  */
 int numOfAllocatedBlocks() {
-	if(!checkInitialization()) {
-		initializeMemory();
-	}
+	checkInitialization();
 	
-	void *current = (void *) STORAGE_ARR;
+	void *current = getFirstBlockAddress();
 	
 	int totalAllocatedBlocks = 0;
 	while(current != NULL) {
