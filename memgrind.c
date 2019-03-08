@@ -6,14 +6,18 @@ double elapsedTimes[6] = {0};
 // Each of below function should allocate and then deallocate complete memory
 
 void test1() {
-	// A: malloc() 1 byte and immediately free it - do this 150 times
-	for(int i=0; i<150; i++) {
-		void *x = malloc(1);
+	
+    // A: malloc() 1 byte and immediately free it - do this 150 times
+    //int i=0;
+	//for(i; i<150; i++) {
+		void *x = malloc(4093);
 		free(x);
-	}	
+	//}
+    
 }
 
 void test2() {
+    
 	// B: malloc() 1 byte, store the pointer in an array - do this 150 times.
 	void *ptr[100];
 	int count = 0;
@@ -22,19 +26,22 @@ void test2() {
 		count++;
 		
 		if(count == 50) {
-			for(int i=0; i<50; i++) {
+            int i=0;
+			for(i; i<50; i++) {
 				free(ptr[i]);
 			}
 		}
 	}
 	// remove the remaining 50 blocks.
-	for(int i=50; i<100; i++) {
+    int i=50;
+    for(i; i<100; i++) {
 		free(ptr[i]);
 	}
+    
 }
 
 void test3() {
-	
+    
 	// C: Randomly choose between a 1 byte malloc() or free()ing a 1 byte pointer
 	void *ptr[100];
 	int alloced = 0;
@@ -52,10 +59,12 @@ void test3() {
 	}
 	while(alloced != 0) {
 		free(ptr[--alloced]);
-	}	
+	}
+    
 }
 
 void test4() {
+    
 	// D. Randomly choose between a randomly-sized malloc() or free()ing a pointer 
 	void *ptr[100];
 	int alloced = 0;
@@ -77,9 +86,11 @@ void test4() {
 	while(freed != alloced) {
 		free(ptr[freed++]);
 	}
+    
 }
 
 void test5() {
+    
 	// E. => random malloc try 5000 times.
 	int count = 0;
 	int totalByteMalloced = 0;
@@ -123,28 +134,29 @@ void test5() {
 	while(alloced != 0) {
 		free(ptr[--alloced]);
 	}
+    
 }
 
-void test6() {	
+void test6() {
+    
 	// F. Test efficient memory allocation after freeing memory block
 	void *ptr[6];
 	
-	// 2 bytes for magic number:
 	// assuming 2 bytes overhead on each block.
-	// 4 blocks of size: (4096 - 2*4 - 2)/4 = 1021
-	ptr[0] = malloc(1021);
-	ptr[1] = malloc(1021);
-	ptr[2] = malloc(1021);
-	ptr[3] = malloc(1021);
+	// 4 blocks of size: (4096 - 2*4)/4 = 1022
+    ptr[0] = malloc(1021);
+    ptr[1] = malloc(1021);
+    ptr[2] = malloc(1021);
+    ptr[3] = malloc(1021);
 	
 	// The entire memory has been allocated now.
 	// Lets remove the middle block
 	free(ptr[1]);
 	
-	// now we should be able to allocate 2 blocks from block size of 1021
-	// The 2 block size can be: (1021 - 2)/2 = 509
-	ptr[4] = malloc(509);
-	ptr[5] = malloc(509);
+	// now we should be able to allocate 2 blocks from block size of 1024
+	// The 2 block size can be: (1024 - 2*2)/2 = 510
+    ptr[4] = malloc(509);
+    ptr[5] = malloc(509);
 	
 	if(ptr[4] == NULL || ptr[5] == NULL) {
 		printf("Test Failed: The freed block memory should have been allocated again efficiently.\n");
@@ -153,8 +165,20 @@ void test6() {
 	free(ptr[2]);
 	free(ptr[3]);
 	free(ptr[4]);
-	free(ptr[5]);	
+	free(ptr[5]);
+    
 }
+
+/*
+void test7() {
+    
+    for(int i=0; i<15000; i++) {
+        void *x = malloc(1);
+        free(x);
+    }
+}
+ 
+ */
 
 void runWorkload(int loadIndex) {
 	
@@ -169,8 +193,9 @@ void runWorkload(int loadIndex) {
 	if(loadIndex == 4) test4();
 	if(loadIndex == 5) test5();
 	if(loadIndex == 6) test6();
+	//if(loadIndex == 7) test7();
 	
-	// end timer
+    // end timer
 	gettimeofday(&t2, NULL);
 	
 	if(numOfAllocatedBlocks() != 0) {
@@ -191,8 +216,8 @@ int main() {
 	
 	int simulations = 0;
 	while(simulations < count) {
-		
-		for(int t=1; t<=6; t++) {
+        int t=1;
+		for(t; t<=6; t++) {
 			runWorkload(t);
 		}
 		
@@ -201,49 +226,9 @@ int main() {
 	
 	// Now average the times.
 	printf("Elapsed time as per workload:\n");
-	for(int t=1; t<=7; t++) {
+    int t=1;
+	for(t; t<=6; t++) {
 		elapsedTimes[t-1] /= count;
-		printf("Workload %d: %lf uSec\n", t, elapsedTimes[t-1]);
-	}	
-	
-	/*
-	printReport();
-	
-	printf("After allocating memory for 20 Integers: \n");
-	int *v = (int *)malloc(20*sizeof(int));
-	printReport();
-	
-	printf("After allocating memory for 20 Integers: \n");
-	int *w = (int *)malloc(20*sizeof(int));
-	printReport();
-	
-	printf("After allocating memory for 20 Integers: \n");
-	int *x = (int *)malloc(20*sizeof(int));
-	printReport();
-	
-	printf("After allocating memory for 20 Integers: \n");
-	int *y = (int *)malloc(20*sizeof(int));
-	printReport();
-	
-	printf("After allocating memory for 20 Integers: \n");
-	int *z = (int *)malloc(20*sizeof(int));
-	printReport();
-	
-	printf("After freeing memory for second block: \n");
-	free(w);
-	printReport();
-	
-	printf("Again allocating memory for 10 Integers: \n");
-	w = (int *)malloc(10*sizeof(int));
-	printReport();	
-		
-	
-	printf("After freeing memory for fourth block: \n");
-	free(y);
-	printReport();
-	
-	printf("After freeing memory for third block: \n");
-	free(x);
-	printReport();
-	*/
+		printf("The Elapsed time is %d: %lf Microseconds.\n", t, elapsedTimes[t-1]);
+	}
 }

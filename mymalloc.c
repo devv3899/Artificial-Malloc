@@ -1,21 +1,9 @@
 #include "mymalloc.h"
 #include <string.h>
 
-// GLOBAL STORAGE on HEAP:
-// static char STORAGE_ARR[4096];
 
-/**
- * Algorithm: We will check in each step if the array has already been initialized.
- * The static array is initialized by all bytes as 0s by the system. When we get first
- * call, we store the size of remaining memory by storing the short value.
- * so if total size is 4096, in first two bytes, we store (4096 - 2) value, which
- * means, next 4094 bytes are free.
- * Also, through out the program, any positive size at start of block will be
- * treated as if the block of memory is getting used.
- * When the user frees some block, we will convert the block size to negative
- * value, to show that the block is now not being used, but has just specified size.
- * Also, between calls, we will try to maintain successive free blocks as a single
- * chunk by merging them.
+/*
+We will check in each step if the array has already been initialized or not. The static array can initially be initialized by all bytes as 0s or any other garbage value in the metadata column by the system. When we get first call, we store the size of remaining memory by storing the short value. So, if total size is 4096, in first 2 bytes we store our magic number to check for the initialization of the static array during first call and in next 2 bytes we store the actual metadata needed to keep track of the free or used block along with its length. So, the remaining space left with us to do the allocation is 4092 Bytes (4096 - 4). Also, throughout the program, any positive size at start of block in the metadata column will be treated as if the block of memory is getting used. When the user frees some block, we will convert the block size to negative value, to show that the block is now not being used but has just specified size. Also, between calls, we will try to maintain successive free blocks as a single chunk by merging them. This way by using only 2 bytes for metadata column and 2 bytes to store a magic number we can make the most efficient program for allocating and freeing the memory in the same way as malloc() and free().
  */
  
 short myAbs(short x) {
@@ -71,6 +59,8 @@ void checkInitialization() {
 	unsigned short *memStart = (unsigned short *) STORAGE_ARR;
 	
 	if(*memStart != MAGIC_NUMBER) {
+        
+        
 		// Memory has not been initialized.
 		
 		// clean memory
@@ -78,16 +68,17 @@ void checkInitialization() {
 		
 		// Put magic number first.
 		*memStart = MAGIC_NUMBER;
-		
-		// forward for skipping MAGIC_NUMBER
-		char *start = (char *) STORAGE_ARR + sizeof(unsigned short);
+    
+        // forward for skipping MAGIC_NUMBER
+        char *start = (char *) STORAGE_ARR + sizeof(unsigned short);
 		char *end = (char *) STORAGE_ARR + MAX_SIZE;
 		
 		// Negative size below shows the block is available to be allocated
 		short size = -1 * (end - start - sizeof(short));
-		
+        //printf("size = %d \n", size);
 		putBlockSize((void *)start, size);
-	}
+	
+    }
 }
 
 
@@ -157,11 +148,13 @@ void *mymalloc(unsigned int size, char *file, unsigned int line) {
 	
 	checkInitialization();
 	
+    //printf("%hu \n", *(short*) &STORAGE_ARR);
+    
 	void *freeBlock = getFirstFreeBlock(size);
 	
 	// If no sufficient memory block is available
 	if(freeBlock == NULL) {
-		printf("Error: Not enough memory available to allocate. File %s and line %u\n", file, line);
+		printf("Error: Not enough memory available to allocate, File %s and line %u\n", file, line);
 		return NULL;
 	}
 	
@@ -260,19 +253,19 @@ void myfree(void *ptr, char *file, unsigned int line) {
 	
 	// check if pointer is in range of our static array
 	if(!isPointerInRange(ptr)) {
-		printf("Error: Invalid Pointer. File %s and line %u\n", file, line);
+		printf("Error: Invalid Pointer, File %s and line %u\n", file, line);
 		return;
 	}
 	
 	// check if pointer has been allocated by our code.
 	if(!isPointerAllocatedByCode(ptr)) {
-		printf("Error: Pointer has not been allocated by mymalloc. File %s and line %u\n", file, line);
+		printf("Error: Pointer has not been allocated by mymalloc, File %s and line %u\n", file, line);
 		return;
 	}
 	
 	// Check if the allocated block has already been freed
 	if(isBlockAvailable(ptr)) {
-		printf("Error: Pointer has already been freed. File %s and line %u\n", file, line);
+		printf("Error: Pointer has already been freed, File %s and line %u\n", file, line);
 		return;
 	}
 	
